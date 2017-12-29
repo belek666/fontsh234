@@ -34,7 +34,7 @@ namespace sh_font
 	{
 		std::uint8_t unknown[0x10];
 		std::uint8_t widthData[0xE0];  // character width table
-		std::uint16_t offsetData[];    // character data offset table
+		std::uint16_t offsetData[];	// character data offset table
 	};	
 
 	std::uint8_t sh_pallete[7] =

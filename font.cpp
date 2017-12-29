@@ -114,30 +114,30 @@ sh_font::SHGAME LoadFontFile(const char *filename)
 		fontSize = file.tellg();
 		fontFile = new uint8_t [fontSize];
 		file.seekg (0, ios::beg);
-    	file.read ((char *)fontFile, fontSize);
-    	file.close();
-    	
-    	cout << "Opening font file " << filename << ", size " << fontSize << endl;
-    	
-    	if (strncmp(filename + strlen(filename) - 3, "bin", 3) == 0) {	
-    		if (fontFile[0] == 0x10) {
-    			sh3head = (sh_font::sh3_font_file_header *)fontFile;
-    			return sh_font::SH3;
+		file.read ((char *)fontFile, fontSize);
+		file.close();
+		
+		cout << "Opening font file " << filename << ", size " << fontSize << endl;
+		
+		if (strncmp(filename + strlen(filename) - 3, "bin", 3) == 0) {	
+			if (fontFile[0] == 0x10) {
+				sh3head = (sh_font::sh3_font_file_header *)fontFile;
+				return sh_font::SH3;
 			} else {
 				sh4head = (sh_font::sh4_font_file_header *)fontFile;
 				return sh_font::SH4;
 			}
 		} else {
 			for (i = 0; i < (fontSize - 7); i++) {
-    			if (fontFile[i] == sh_font::sh_pallete[0] && fontFile[i + 1] == sh_font::sh_pallete[1] && 
-    				fontFile[i + 2] == sh_font::sh_pallete[2] && fontFile[i + 3] == sh_font::sh_pallete[3] &&
-    				fontFile[i + 4] == sh_font::sh_pallete[4] && fontFile[i + 5] == sh_font::sh_pallete[5] &&
-    				fontFile[i + 6] == sh_font::sh_pallete[6] ) {
-    		
-    				sh2head = (sh_font::sh2_font_file_header *)(fontFile + i - 16);
-    				
-    				if (sh2head->unk == 0x1F)
-    				 	return sh_font::SH2;
+				if (fontFile[i] == sh_font::sh_pallete[0] && fontFile[i + 1] == sh_font::sh_pallete[1] && 
+					fontFile[i + 2] == sh_font::sh_pallete[2] && fontFile[i + 3] == sh_font::sh_pallete[3] &&
+					fontFile[i + 4] == sh_font::sh_pallete[4] && fontFile[i + 5] == sh_font::sh_pallete[5] &&
+					fontFile[i + 6] == sh_font::sh_pallete[6] ) {
+			
+					sh2head = (sh_font::sh2_font_file_header *)(fontFile + i - 16);
+					
+					if (sh2head->unk == 0x1F)
+					 	return sh_font::SH2;
 				}
 			}
 		}
@@ -282,21 +282,21 @@ uint8_t *DecodeChar(int charId)
 					
 					if (Bits == 0) {
 						Bits2 = GetBits(charOffset);
-                    	Bits = GetBits(charOffset);
-                    	
-                     	if (Bits == 0 && Bits2 == 0) {
-                        	Bits3= GetBits(charOffset);
-                        	Bits2 = GetBits(charOffset);
-                        	Bits = GetBits(charOffset);
+						Bits = GetBits(charOffset);
+						
+					 	if (Bits == 0 && Bits2 == 0) {
+							Bits3= GetBits(charOffset);
+							Bits2 = GetBits(charOffset);
+							Bits = GetBits(charOffset);
 
-                        	num = 0;
-                        	num = (int)((Bits << 6) | (Bits2 << 3) | (Bits3));
-                        	zeroSpace = zeroSpace + num + 84;
-                     	} else {
-                        	num = 0;
-                        	num = (int)((Bits << 3) | (Bits2));
-                        	zeroSpace = zeroSpace + num + 21;
-                     	}
+							num = 0;
+							num = (int)((Bits << 6) | (Bits2 << 3) | (Bits3));
+							zeroSpace = zeroSpace + num + 84;
+					 	} else {
+							num = 0;
+							num = (int)((Bits << 3) | (Bits2));
+							zeroSpace = zeroSpace + num + 21;
+					 	}
 					} else {
 						zeroSpace = zeroSpace + Bits + 14;
 					}
@@ -309,27 +309,27 @@ uint8_t *DecodeChar(int charId)
 			
 			zeroSpace++;
 			
-            while (zeroSpace) {
-               charDecoded[dataOffset + 0] = 0;
-               charDecoded[dataOffset + 1] = 0;
-               charDecoded[dataOffset + 2] = 0;
-               charDecoded[dataOffset + 3] = 0;
+			while (zeroSpace) {
+			   charDecoded[dataOffset + 0] = 0;
+			   charDecoded[dataOffset + 1] = 0;
+			   charDecoded[dataOffset + 2] = 0;
+			   charDecoded[dataOffset + 3] = 0;
 
-               dataOffset += 4;
-               zeroSpace--;
+			   dataOffset += 4;
+			   zeroSpace--;
 
-               cout << "*";
-            }
+			   cout << "*";
+			}
 		} else {
-            charDecoded[dataOffset + 0] = sh_font::sh_pallete[Bits];
-            charDecoded[dataOffset + 1] = sh_font::sh_pallete[Bits];
-            charDecoded[dataOffset + 2] = sh_font::sh_pallete[Bits];
-            charDecoded[dataOffset + 3] = 0xFF;
-            
-            if (charDecoded[dataOffset] == 0)
-            	charDecoded[dataOffset + 3] = 0x00;
+			charDecoded[dataOffset + 0] = sh_font::sh_pallete[Bits];
+			charDecoded[dataOffset + 1] = sh_font::sh_pallete[Bits];
+			charDecoded[dataOffset + 2] = sh_font::sh_pallete[Bits];
+			charDecoded[dataOffset + 3] = 0xFF;
+			
+			if (charDecoded[dataOffset] == 0)
+				charDecoded[dataOffset + 3] = 0x00;
 
-            dataOffset += 4;
+			dataOffset += 4;
 		}
 		
 		cout << "*";
@@ -352,14 +352,14 @@ void GiveBits(uint8_t Bits)
 
    charData |= dataBits << writeOffset;
    
-   charEncoded[encOffset    ] = charData;
+   charEncoded[encOffset	] = charData;
    charEncoded[encOffset + 1] = charData >> 8;
    charEncoded[encOffset + 2] = charData >> 16;
    
    if (writeOffset == 21) {
-      encOffset += 3;
-      writeOffset = 0;
-      charData = 0;
+	  encOffset += 3;
+	  writeOffset = 0;
+	  charData = 0;
    } else {
    	  writeOffset += 3;
    }
@@ -388,83 +388,83 @@ int EncodeChar(uint8_t *charImg, int size)
 	cout << "Encoding" << endl; 
 	
 	while (dataOffset < size) {
-		if (charImg[dataOffset    ] == 0 &&
-            charImg[dataOffset + 1] == 0 &&
-            charImg[dataOffset + 2] == 0 &&
-            charImg[dataOffset + 3] == 0 &&
+		if (charImg[dataOffset	] == 0 &&
+			charImg[dataOffset + 1] == 0 &&
+			charImg[dataOffset + 2] == 0 &&
+			charImg[dataOffset + 3] == 0 &&
 			charImg[dataOffset + 4] == 0) {
-            
-            Bits = 0x07;
-            GiveBits(Bits);
-            zeroSpace = 0;                      
-			while (charImg[dataOffset    ] == 0 &&
-            	   charImg[dataOffset + 1] == 0 &&
-            	   charImg[dataOffset + 2] == 0 &&
-            	   charImg[dataOffset + 3] == 0) {
-               dataOffset += 4;                
-               zeroSpace++;
+			
+			Bits = 0x07;
+			GiveBits(Bits);
+			zeroSpace = 0;					  
+			while (charImg[dataOffset	] == 0 &&
+				   charImg[dataOffset + 1] == 0 &&
+				   charImg[dataOffset + 2] == 0 &&
+				   charImg[dataOffset + 3] == 0) {
+			   dataOffset += 4;				
+			   zeroSpace++;
 			   
 			   if (dataOffset >= size) 
 			   		break;
 			   		
 			   	cout << "*";
-            }
-            
-            zeroSpace--;
-            
-            if ((zeroSpace - 84) > 0) {
-            	Bits = 0; //x5
-               	for(i = 0; i < 5; i++)
-               		GiveBits(Bits);
-               
-               	num = zeroSpace - 84;
+			}
+			
+			zeroSpace--;
+			
+			if ((zeroSpace - 84) > 0) {
+				Bits = 0; //x5
+			   	for(i = 0; i < 5; i++)
+			   		GiveBits(Bits);
+			   
+			   	num = zeroSpace - 84;
   
-               	Bits3 = (uint8_t)num;
-               	GiveBits(Bits3);
-               	Bits2 = num >> 3;
-               	GiveBits(Bits2);
-               	Bits = num >> 6;
-               	GiveBits(Bits);
-            } else if ((zeroSpace - 21) > 0) {
-               	Bits = 0; //x3
-               	for(i=0; i<3; i++)
-               		GiveBits(Bits);
-               
+			   	Bits3 = (uint8_t)num;
+			   	GiveBits(Bits3);
+			   	Bits2 = num >> 3;
+			   	GiveBits(Bits2);
+			   	Bits = num >> 6;
+			   	GiveBits(Bits);
+			} else if ((zeroSpace - 21) > 0) {
+			   	Bits = 0; //x3
+			   	for(i=0; i<3; i++)
+			   		GiveBits(Bits);
+			   
 			   	num = zeroSpace - 21;
 
-               	Bits2 = (uint8_t)num;
-               	GiveBits(Bits2);
-               	Bits = num >> 3;
-               	GiveBits(Bits);
-        	} else if ((zeroSpace - 14) > 0) {
-               	Bits = 0; //x2
-               	for(i=0; i<2; i++)
-               		GiveBits(Bits);
-               
+			   	Bits2 = (uint8_t)num;
+			   	GiveBits(Bits2);
+			   	Bits = num >> 3;
+			   	GiveBits(Bits);
+			} else if ((zeroSpace - 14) > 0) {
+			   	Bits = 0; //x2
+			   	for(i=0; i<2; i++)
+			   		GiveBits(Bits);
+			   
 			   	Bits = zeroSpace - 14;
-               	GiveBits(Bits);      
-            } else if ((zeroSpace - 7) > 0) {
-               	Bits = 0;
-               	GiveBits(Bits);     
-               	Bits = zeroSpace - 7;
-               	GiveBits(Bits);
-            } else {
-               	Bits = zeroSpace;
-               	GiveBits(Bits);
-            }
+			   	GiveBits(Bits);	  
+			} else if ((zeroSpace - 7) > 0) {
+			   	Bits = 0;
+			   	GiveBits(Bits);	 
+			   	Bits = zeroSpace - 7;
+			   	GiveBits(Bits);
+			} else {
+			   	Bits = zeroSpace;
+			   	GiveBits(Bits);
+			}
 		} else {   
-            for (i = 0; i < 7; i++) {
-                if (charImg[dataOffset    ] == sh_font::sh_pallete[i] && 
-                    charImg[dataOffset + 1] == sh_font::sh_pallete[i] &&
-                    charImg[dataOffset + 2] == sh_font::sh_pallete[i]) {
-                    Bits = i;
-                    break;
+			for (i = 0; i < 7; i++) {
+				if (charImg[dataOffset	] == sh_font::sh_pallete[i] && 
+					charImg[dataOffset + 1] == sh_font::sh_pallete[i] &&
+					charImg[dataOffset + 2] == sh_font::sh_pallete[i]) {
+					Bits = i;
+					break;
 				}
-            }
-            dataOffset += 4;
-            GiveBits(Bits);
-        }
-        cout << "*";
+			}
+			dataOffset += 4;
+			GiveBits(Bits);
+		}
+		cout << "*";
 	}
 	
 	cout << endl;
@@ -548,37 +548,37 @@ bool decode2tga(int charId, const char *filename)
 	memset(&tga, 0, sizeof(TGA_FILEHEADER));
 	
 	tga.color_map_type = 1;
-    tga.image_type = 1;
-    tga.cm_length = sizeof(tga_pallete) / 4;
-    tga.map_entry_size = 32;
-    tga.pixel_depth = 8;
-    tga.width = GetCharWidth(charId);
-    tga.height = GetCharHeight();
-    
-    ofstream file(filename, ofstream::binary);
-    file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
-    file.write ((char *)&tga_pallete, sizeof(tga_pallete));
-    
-    uint8_t *data = DecodeChar(charId);
-    
-    if (data == NULL) {
-    	cout << "No data" << endl;
-    	return false;
+	tga.image_type = 1;
+	tga.cm_length = sizeof(tga_pallete) / 4;
+	tga.map_entry_size = 32;
+	tga.pixel_depth = 8;
+	tga.width = GetCharWidth(charId);
+	tga.height = GetCharHeight();
+	
+	ofstream file(filename, ofstream::binary);
+	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
+	file.write ((char *)&tga_pallete, sizeof(tga_pallete));
+	
+	uint8_t *data = DecodeChar(charId);
+	
+	if (data == NULL) {
+		cout << "No data" << endl;
+		return false;
 	}
-    
-    for (i = GetCharHeight() - 1; i > -1; i--) {
-    	for (j = 0; j < GetCharWidth(charId); j++) {
-    		for (k = 0; k < 7; k++) {
+	
+	for (i = GetCharHeight() - 1; i > -1; i--) {
+		for (j = 0; j < GetCharWidth(charId); j++) {
+			for (k = 0; k < 7; k++) {
 				if (data[i * GetCharWidth(charId) * 4 + j * 4] == sh_font::sh_pallete[k]) {
-    				file.write ((char *)&k, 1);
+					file.write ((char *)&k, 1);
 				}
 			}
 		}
 	}
-    
-    file.close();
+	
+	file.close();
 
-    return true;
+	return true;
 }
 
 int encodeFromTga(int charId, const char *filename)
@@ -591,12 +591,12 @@ int encodeFromTga(int charId, const char *filename)
 	
 	if (file.is_open()) {
 		file.seekg(0, ios::beg);
-    	file.read((char *)&tga, sizeof(TGA_FILEHEADER));
-    	
-    	if (tga.color_map_type != 1 || tga.image_type != 1 ||
-    		tga.cm_length != sizeof(tga_pallete) / 4 || tga.map_entry_size != 32 ||
-    		tga.pixel_depth != 8) {
-    		cout << "Wrong tga format!" << endl;
+		file.read((char *)&tga, sizeof(TGA_FILEHEADER));
+		
+		if (tga.color_map_type != 1 || tga.image_type != 1 ||
+			tga.cm_length != sizeof(tga_pallete) / 4 || tga.map_entry_size != 32 ||
+			tga.pixel_depth != 8) {
+			cout << "Wrong tga format!" << endl;
 			return 0;  	
 		}
 		
@@ -609,36 +609,36 @@ int encodeFromTga(int charId, const char *filename)
 			cout << "Wrong character width!" << endl;
 			return 0;
 		}
-    	
-    	file.seekg(sizeof(TGA_FILEHEADER) + sizeof(tga_pallete), ios::beg);
-    	
-    	int size = tga.width * tga.height * 4;
-    	uint8_t *charData = new uint8_t[size];
-    	
-    	for (i = tga.height - 1; i > -1; i--) {
-    		for (j = 0; j < tga.width; j++) {
-    			file.read((char *)&c, 1);
-    			
-    			if (c == 0) {
-    				charData[i * tga.width * 4 + j * 4 + 0] = 0;
-    				charData[i * tga.width * 4 + j * 4 + 1] = 0;
-    				charData[i * tga.width * 4 + j * 4 + 2] = 0;
-    				charData[i * tga.width * 4 + j * 4 + 3] = 0;
+		
+		file.seekg(sizeof(TGA_FILEHEADER) + sizeof(tga_pallete), ios::beg);
+		
+		int size = tga.width * tga.height * 4;
+		uint8_t *charData = new uint8_t[size];
+		
+		for (i = tga.height - 1; i > -1; i--) {
+			for (j = 0; j < tga.width; j++) {
+				file.read((char *)&c, 1);
+				
+				if (c == 0) {
+					charData[i * tga.width * 4 + j * 4 + 0] = 0;
+					charData[i * tga.width * 4 + j * 4 + 1] = 0;
+					charData[i * tga.width * 4 + j * 4 + 2] = 0;
+					charData[i * tga.width * 4 + j * 4 + 3] = 0;
 				} else {
 					charData[i * tga.width * 4 + j * 4 + 0] = sh_font::sh_pallete[c];
-    				charData[i * tga.width * 4 + j * 4 + 1] = sh_font::sh_pallete[c];
-    				charData[i * tga.width * 4 + j * 4 + 2] = sh_font::sh_pallete[c];
-    				charData[i * tga.width * 4 + j * 4 + 3] = 0xFF;
+					charData[i * tga.width * 4 + j * 4 + 1] = sh_font::sh_pallete[c];
+					charData[i * tga.width * 4 + j * 4 + 2] = sh_font::sh_pallete[c];
+					charData[i * tga.width * 4 + j * 4 + 3] = 0xFF;
 				}
-    		}
-    	}
-    	
-    	file.close();
-    	
-    	if (charId < 0xE0)
-    		fontdata->widthData[charId] = tga.width;
-    	
-    	return EncodeChar(charData, size);
+			}
+		}
+		
+		file.close();
+		
+		if (charId < 0xE0)
+			fontdata->widthData[charId] = tga.width;
+		
+		return EncodeChar(charData, size);
 	}
 	
 	return 0;
@@ -738,7 +738,7 @@ void insert2file(int charId, int size, const char *filename)
 	}
 
 	ofstream efile(filename, ofstream::binary);
-    efile.write ((char *)fontFile, fontSize);
-    efile.close();
+	efile.write ((char *)fontFile, fontSize);
+	efile.close();
 }
 
