@@ -555,16 +555,16 @@ bool decode2tga(int charId, const char *filename)
 	tga.width = GetCharWidth(charId);
 	tga.height = GetCharHeight();
 	
-	ofstream file(filename, ofstream::binary);
-	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
-	file.write ((char *)&tga_pallete, sizeof(tga_pallete));
-	
 	uint8_t *data = DecodeChar(charId);
 	
 	if (data == NULL) {
 		cout << "No data" << endl;
 		return false;
 	}
+	
+	ofstream file(filename, ofstream::binary);
+	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
+	file.write ((char *)&tga_pallete, sizeof(tga_pallete));
 	
 	for (i = GetCharHeight() - 1; i > -1; i--) {
 		for (j = 0; j < GetCharWidth(charId); j++) {
