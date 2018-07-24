@@ -6,8 +6,8 @@ namespace sh_font
 	
 	struct sh2_font_file_header
 	{
-		std::uint16_t normalFontHeight;  // 30
-		std::uint16_t smallFontHeight;   // 20
+		std::uint16_t normalFontHeight;  // 20
+		std::uint16_t smallFontHeight;   // 30
 		std::uint16_t normalKFontHeight; // 16
 		std::uint16_t smallKFontHeight;  // 24
 		std::uint32_t normalFontOffset;  // character height = 30
