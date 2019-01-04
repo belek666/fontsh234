@@ -195,17 +195,17 @@ int GetCharWidth(int charId)
 {
 	if (charId >= 0xE0) {
 		if (fontType == NORMAL) {
-			if (game == sh_font::SH4)
-				return 25;
-			else if (game == sh_font::SH2)
+			if (game == sh_font::SH2)
 				return sh2head->normalFontWidth;
+			else if (game == sh_font::SH4)
+				return 25;
 			else
 				return 20;
 		} else if (fontType == SMALL) {
-			if (game == sh_font::SH4)
-				return 20;
-			else if (game == sh_font::SH2)
+			if (game == sh_font::SH2)
 				return sh2head->smallFontWidth;
+			else if (game == sh_font::SH4)
+				return 20;
 			else
 				return 16;
 		}
@@ -219,11 +219,15 @@ int GetCharHeight()
 	if (fontType == NORMAL)
 		if (game == sh_font::SH2)
 			return sh2head->normalFontHeight;
+		else if (game == sh_font::SH4)
+			return 32;
 		else
 			return 30;
 	else if (fontType == SMALL)
 		if (game == sh_font::SH2)
 			return sh2head->smallFontHeight;
+		else if (game == sh_font::SH4)
+			return 26;
 		else
 			return 24;
 	
