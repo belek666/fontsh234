@@ -4,23 +4,36 @@ namespace sh_font
 {
 	#pragma pack(push, 1)
 	
+	typedef struct {
+		float x;
+		float y;
+		float z;
+		std::uint32_t color;
+	} fontPrimVertex;
+	
 	struct sh2_font_file_header
 	{
-		std::uint16_t normalFontHeight;  // 20
-		std::uint16_t smallFontHeight;   // 30
-		std::uint16_t normalKFontHeight; // 16
-		std::uint16_t smallKFontHeight;  // 24
-		std::uint32_t normalFontOffset;  // character height = 30
-		std::uint32_t smallFontOffset;   // character height = 24
+		std::uint16_t normalFontWidth;		// 20
+		std::uint16_t normalFontHeight;		// 30
+		std::uint16_t smallFontWidth;		// 16
+		std::uint16_t smallFontHeight;		// 24
+		std::uint32_t normalFontOffset;		// character height = 30
+		std::uint32_t smallFontOffset;		// character height = 24
 		std::uint8_t  pallete[7];
 		std::uint8_t  unk;
+		fontPrimVertex a;					// vertices for D3DPT_TRIANGLELIST
+		fontPrimVertex b;
+		fontPrimVertex c;
+		fontPrimVertex d;
+		fontPrimVertex e;
+		fontPrimVertex f;
 	};
 	
 	struct sh3_font_file_header
 	{
-		std::uint32_t normalFontOffset;  // character height = 30
-		std::uint32_t smallFontOffset;   // character height = 24
-		std::uint32_t unknownDataOffset; // what is this?
+		std::uint32_t normalFontOffset;		// character height = 30
+		std::uint32_t smallFontOffset;		// character height = 24
+		std::uint32_t unknownDataOffset;	// what is this?
 		std::uint32_t padding;
 	};
 	
@@ -32,10 +45,10 @@ namespace sh_font
 	
 	struct sh_font_data
 	{
-		std::uint8_t unknown[0x10];
-		std::uint8_t widthData[0xE0];  // character width table
-		std::uint16_t offsetData[];	// character data offset table
-	};	
+		std::uint16_t boffset[8];			// char ids which offsets >= 0x40000
+		std::uint8_t widthData[0xE0];		// character width table
+		std::uint16_t offsetData[];			// character data offset table
+	};
 
 	std::uint8_t sh_pallete[7] =
 	{

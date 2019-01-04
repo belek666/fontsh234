@@ -29,9 +29,9 @@ int encodeFromTga(int charId, const char *filename);
 void insert2file(int charId, int size, const char *filename);
 
 uint8_t *charEncoded;
-
 uint8_t *fontFile;
 int fontSize;
+int isSH4 = 0;
 
 sh_font::sh2_font_file_header *sh2head;
 sh_font::sh3_font_file_header *sh3head;
@@ -106,7 +106,8 @@ exit:
 sh_font::SHGAME LoadFontFile(const char *filename)
 {
 	int i;
-	
+	isSH4 = 0;
+
 	ifstream file(filename, ios::in|ios::binary|ios::ate);
 	
 	if (file.is_open()) {
@@ -125,6 +126,7 @@ sh_font::SHGAME LoadFontFile(const char *filename)
 				return sh_font::SH3;
 			} else {
 				sh4head = (sh_font::sh4_font_file_header *)fontFile;
+				isSH4 = 0x70;
 				return sh_font::SH4;
 			}
 		} else {
@@ -195,11 +197,15 @@ int GetCharWidth(int charId)
 		if (fontType == NORMAL) {
 			if (game == sh_font::SH4)
 				return 25;
+			else if (game == sh_font::SH2)
+				return sh2head->normalFontWidth;
 			else
 				return 20;
 		} else if (fontType == SMALL) {
 			if (game == sh_font::SH4)
 				return 20;
+			else if (game == sh_font::SH2)
+				return sh2head->smallFontWidth;
 			else
 				return 16;
 		}
@@ -210,19 +216,45 @@ int GetCharWidth(int charId)
 
 int GetCharHeight()
 {
-	if (fontType == NORMAL) {
-		if (game == sh_font::SH4)
-			return 32;
+	if (fontType == NORMAL)
+		if (game == sh_font::SH2)
+			return sh2head->normalFontHeight;
 		else
 			return 30;
-	} else if (fontType == SMALL) {
-		if (game == sh_font::SH4)
-			return 26;
+	else if (fontType == SMALL)
+		if (game == sh_font::SH2)
+			return sh2head->smallFontHeight;
 		else
 			return 24;
-	}
-
+	
 	return 0;
+}
+
+int getPage(int charId)
+{
+	int i = 0;
+	int page = 0;
+	
+	if (fontdata->boffset[0] != 0) {
+		do {
+			if (fontdata->boffset[i] < charId)
+				page++;
+	
+			i++;
+		} while (fontdata->boffset[i]);
+	}
+	
+	return page;
+}
+
+void updatePage(int charId, int m, unsigned int pg)
+{
+	if (pg < 8) {
+		if (m == 0)
+			fontdata->boffset[pg] = charId;
+		if (m == 1 && fontdata->boffset[pg] - 1 >= charId)
+			fontdata->boffset[pg] = charId + 1;
+	}
 }
 
 int charData = 0;
@@ -251,14 +283,11 @@ uint8_t GetBits(int offset) //reads 3 bits from packed data
 uint8_t *DecodeChar(int charId)
 {
 	int charSize = GetCharWidth(charId) * GetCharHeight() * 4;
-	int charOffset = fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] * 4;
+	int charOffset = fontdata->offsetData[charId + isSH4] * 4 + 0x10000 * 4 * getPage(charId);
 	
-	if (fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] == 0)
+	if (fontdata->offsetData[charId + isSH4] == 0)
 		return NULL;
-		
-	if (fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] < fontdata->offsetData[1 + ((game == sh_font::SH4) * 0x70)])
-		charOffset += 0x10000 * 4;
-	
+
 	uint8_t *charDecoded = new uint8_t[charSize];
 	
 	charData = 0;
@@ -266,8 +295,8 @@ uint8_t *DecodeChar(int charId)
 	readOffset = 0;
 	
 	uint8_t Bits = 0;
-   	uint8_t Bits2 = 0;
-   	uint8_t Bits3 = 0;
+	uint8_t Bits2 = 0;
+	uint8_t Bits3 = 0;
 	int dataOffset = 0;
 	int zeroSpace = 0;
 	int num = 0;
@@ -291,7 +320,7 @@ uint8_t *DecodeChar(int charId)
 						Bits2 = GetBits(charOffset);
 						Bits = GetBits(charOffset);
 						
-					 	if (Bits == 0 && Bits2 == 0) {
+						if (Bits == 0 && Bits2 == 0) {
 							Bits3= GetBits(charOffset);
 							Bits2 = GetBits(charOffset);
 							Bits = GetBits(charOffset);
@@ -299,11 +328,11 @@ uint8_t *DecodeChar(int charId)
 							num = 0;
 							num = (int)((Bits << 6) | (Bits2 << 3) | (Bits3));
 							zeroSpace = zeroSpace + num + 84;
-					 	} else {
+						} else {
 							num = 0;
 							num = (int)((Bits << 3) | (Bits2));
 							zeroSpace = zeroSpace + num + 21;
-					 	}
+						}
 					} else {
 						zeroSpace = zeroSpace + Bits + 14;
 					}
@@ -317,15 +346,15 @@ uint8_t *DecodeChar(int charId)
 			zeroSpace++;
 			
 			while (zeroSpace) {
-			   charDecoded[dataOffset + 0] = 0;
-			   charDecoded[dataOffset + 1] = 0;
-			   charDecoded[dataOffset + 2] = 0;
-			   charDecoded[dataOffset + 3] = 0;
+				charDecoded[dataOffset + 0] = 0;
+				charDecoded[dataOffset + 1] = 0;
+				charDecoded[dataOffset + 2] = 0;
+				charDecoded[dataOffset + 3] = 0;
 
-			   dataOffset += 4;
-			   zeroSpace--;
+				dataOffset += 4;
+				zeroSpace--;
 
-			   cout << "*";
+				cout << "*";
 			}
 		} else {
 			charDecoded[dataOffset + 0] = sh_font::sh_pallete[Bits];
@@ -353,25 +382,25 @@ int encSize = 0;
 
 void GiveBits(uint8_t Bits)
 {
-   int dataBits = 0;
+	int dataBits = 0;
 
-   dataBits = Bits & 0x07;
+	dataBits = Bits & 0x07;
 
-   charData |= dataBits << writeOffset;
-   
-   charEncoded[encOffset	] = charData;
-   charEncoded[encOffset + 1] = charData >> 8;
-   charEncoded[encOffset + 2] = charData >> 16;
-   
-   if (writeOffset == 21) {
+	charData |= dataBits << writeOffset;
+	
+	charEncoded[encOffset    ] = charData;
+	charEncoded[encOffset + 1] = charData >> 8;
+	charEncoded[encOffset + 2] = charData >> 16;
+	
+	if (writeOffset == 21) {
 	  encOffset += 3;
 	  writeOffset = 0;
 	  charData = 0;
-   } else {
-   	  writeOffset += 3;
-   }
-   
-   encSize++;
+	} else {
+		writeOffset += 3;
+	}
+	
+	encSize++;
 }
 
 int EncodeChar(uint8_t *charImg, int size)
@@ -386,8 +415,8 @@ int EncodeChar(uint8_t *charImg, int size)
 	encSize = 0;
 	
 	uint8_t Bits = 0;
-   	uint8_t Bits2 = 0;
-   	uint8_t Bits3 = 0;
+	uint8_t Bits2 = 0;
+	uint8_t Bits3 = 0;
 	int dataOffset = 0;
 	int zeroSpace = 0;
 	int num = 0;
@@ -395,7 +424,7 @@ int EncodeChar(uint8_t *charImg, int size)
 	cout << "Encoding" << endl; 
 	
 	while (dataOffset < size) {
-		if (charImg[dataOffset	] == 0 &&
+		if (charImg[dataOffset    ] == 0 &&
 			charImg[dataOffset + 1] == 0 &&
 			charImg[dataOffset + 2] == 0 &&
 			charImg[dataOffset + 3] == 0 &&
@@ -403,65 +432,65 @@ int EncodeChar(uint8_t *charImg, int size)
 			
 			Bits = 0x07;
 			GiveBits(Bits);
-			zeroSpace = 0;					  
-			while (charImg[dataOffset	] == 0 &&
+			zeroSpace = 0;
+			while (charImg[dataOffset    ] == 0 &&
 				   charImg[dataOffset + 1] == 0 &&
 				   charImg[dataOffset + 2] == 0 &&
 				   charImg[dataOffset + 3] == 0) {
-			   dataOffset += 4;				
-			   zeroSpace++;
-			   
-			   if (dataOffset >= size) 
-			   		break;
-			   		
-			   	cout << "*";
+				dataOffset += 4;
+				zeroSpace++;
+				
+				if (dataOffset >= size) 
+					break;
+						
+				cout << "*";
 			}
 			
 			zeroSpace--;
 			
 			if ((zeroSpace - 84) > 0) {
 				Bits = 0; //x5
-			   	for(i = 0; i < 5; i++)
-			   		GiveBits(Bits);
-			   
-			   	num = zeroSpace - 84;
+				for(i = 0; i < 5; i++)
+					GiveBits(Bits);
+			
+				num = zeroSpace - 84;
   
-			   	Bits3 = (uint8_t)num;
-			   	GiveBits(Bits3);
-			   	Bits2 = num >> 3;
-			   	GiveBits(Bits2);
-			   	Bits = num >> 6;
-			   	GiveBits(Bits);
+				Bits3 = (uint8_t)num;
+				GiveBits(Bits3);
+				Bits2 = num >> 3;
+				GiveBits(Bits2);
+				Bits = num >> 6;
+				GiveBits(Bits);
 			} else if ((zeroSpace - 21) > 0) {
-			   	Bits = 0; //x3
-			   	for(i=0; i<3; i++)
-			   		GiveBits(Bits);
-			   
-			   	num = zeroSpace - 21;
+				Bits = 0; //x3
+				for(i=0; i<3; i++)
+					GiveBits(Bits);
+			
+				num = zeroSpace - 21;
 
-			   	Bits2 = (uint8_t)num;
-			   	GiveBits(Bits2);
-			   	Bits = num >> 3;
-			   	GiveBits(Bits);
+				Bits2 = (uint8_t)num;
+				GiveBits(Bits2);
+				Bits = num >> 3;
+				GiveBits(Bits);
 			} else if ((zeroSpace - 14) > 0) {
-			   	Bits = 0; //x2
-			   	for(i=0; i<2; i++)
-			   		GiveBits(Bits);
-			   
-			   	Bits = zeroSpace - 14;
-			   	GiveBits(Bits);	  
+				Bits = 0; //x2
+				for(i=0; i<2; i++)
+					GiveBits(Bits);
+			
+				Bits = zeroSpace - 14;
+				GiveBits(Bits);
 			} else if ((zeroSpace - 7) > 0) {
-			   	Bits = 0;
-			   	GiveBits(Bits);	 
-			   	Bits = zeroSpace - 7;
-			   	GiveBits(Bits);
+				Bits = 0;
+				GiveBits(Bits);	 
+				Bits = zeroSpace - 7;
+				GiveBits(Bits);
 			} else {
-			   	Bits = zeroSpace;
-			   	GiveBits(Bits);
+				Bits = zeroSpace;
+				GiveBits(Bits);
 			}
-		} else {   
+		} else {
 			for (i = 0; i < 7; i++) {
-				if (charImg[dataOffset	] == sh_font::sh_pallete[i] && 
+				if (charImg[dataOffset    ] == sh_font::sh_pallete[i] && 
 					charImg[dataOffset + 1] == sh_font::sh_pallete[i] &&
 					charImg[dataOffset + 2] == sh_font::sh_pallete[i]) {
 					Bits = i;
@@ -606,7 +635,7 @@ int encodeFromTga(int charId, const char *filename)
 			cout << "Wrong tga format!" << endl;
 			return 0;  	
 		}
-		
+#if 1		
 		if (tga.height != GetCharHeight()) {
 			cout << "Wrong character height!" << endl;
 			return 0;
@@ -616,6 +645,7 @@ int encodeFromTga(int charId, const char *filename)
 			cout << "Wrong character width!" << endl;
 			return 0;
 		}
+#endif
 		
 		file.seekg(sizeof(TGA_FILEHEADER) + sizeof(tga_pallete), ios::beg);
 		
@@ -658,38 +688,29 @@ void insert2file(int charId, int size, const char *filename)
 	int oldSize;
 	uint8_t *tempData;
 	
-	charStartOffset = fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] * 4;
+	charStartOffset = fontdata->offsetData[charId + isSH4] * 4;
 	
 	if (charStartOffset == 0) {
 		i = 0;
-		while (charStartOffset == 0) {
-			charStartOffset = fontdata->offsetData[charId + i + ((game == sh_font::SH4) * 0x70)] * 4;
-			if (fontdata->offsetData[charId + i + ((game == sh_font::SH4) * 0x70)] > 0 && fontdata->offsetData[charId + i + ((game == sh_font::SH4) * 0x70)] < fontdata->offsetData[1 + ((game == sh_font::SH4) * 0x70)])
-				charStartOffset += 0x10000 * 4;
-
+		do {
+			charStartOffset = fontdata->offsetData[charId + i + isSH4] * 4;
 			i++;
-		}
+		} while (charStartOffset == 0);
+		charStartOffset += 0x10000 * 4 * getPage(charId + i - 1);
 		oldSize = 0;
 	} else {
-		if (fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] < fontdata->offsetData[1 + ((game == sh_font::SH4) * 0x70)])
-			charStartOffset += 0x10000 * 4;
-		
-		charEndOffset = fontdata->offsetData[charId + 1 + ((game == sh_font::SH4) * 0x70)] * 4;
-			
+		charStartOffset += 0x10000 * 4 * getPage(charId);
+		charEndOffset = fontdata->offsetData[charId + 1 + isSH4] * 4;
 		if (charEndOffset == 0) {
 			i = 0;
-			while (charEndOffset == 0) {
-				charEndOffset = fontdata->offsetData[charId + 1 + i + ((game == sh_font::SH4) * 0x70)] * 4;
-				if (fontdata->offsetData[charId + 1 + i + ((game == sh_font::SH4) * 0x70)] > 0 && fontdata->offsetData[charId + 1 + i + ((game == sh_font::SH4) * 0x70)] < fontdata->offsetData[1 + ((game == sh_font::SH4) * 0x70)])
-					charEndOffset += 0x10000 * 4;
-
+			do {
+				charEndOffset = fontdata->offsetData[charId + 1 + i + isSH4] * 4;
 				i++;
-			}
+			} while (charEndOffset == 0);
+			charEndOffset += 0x10000 * 4 * getPage(charId + 1 + i - 1);
 		} else {
-			if (fontdata->offsetData[charId + 1 + ((game == sh_font::SH4) * 0x70)] < fontdata->offsetData[1 + ((game == sh_font::SH4) * 0x70)])
-				charEndOffset += 0x10000 * 4;
+			charEndOffset += 0x10000 * 4 * getPage(charId + 1);
 		}
-		
 		oldSize = charEndOffset - charStartOffset;
 	}
 
@@ -698,45 +719,57 @@ void insert2file(int charId, int size, const char *filename)
 	} else if (oldSize < size) {
 		i = 0;
 		charEndOffset = 0;
-		while (charEndOffset == 0) {
-			charEndOffset = fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] * 4;
+		do {
+			charEndOffset = fontdata->offsetData[i + isSH4] * 4;
 			i++;
-		}
+		} while (charEndOffset == 0);
 		tempData = new uint8_t[charStartOffset - charEndOffset];
 		memcpy(tempData, (uint8_t *)fontdata + charEndOffset, charStartOffset - charEndOffset);
 		memcpy((uint8_t *)fontdata + charEndOffset - (size - oldSize), tempData, charStartOffset - charEndOffset);
 		memcpy((uint8_t *)fontdata + charStartOffset - (size - oldSize), charEncoded, size);
 		for (i = 0; i < charId; i++) {
-			if (fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] != 0)
-				fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] -= (size - oldSize) / 4;
+			if (fontdata->offsetData[i + isSH4] != 0) {
+				if (getPage(i) != 0 && (fontdata->offsetData[i + isSH4] * 4 + 0x40000 * getPage(i) - (oldSize - size) < 0x40000))
+					updatePage(i, 0, 0);
+				
+				fontdata->offsetData[i + isSH4] -= (size - oldSize) / 4;
+			}
 		}
-		if ((charStartOffset - (size - oldSize)) > 0x40000)
+		if ((charStartOffset - (size - oldSize)) > 0x40000) {
 			charStartOffset -= 0x40000;
+			updatePage(charId, 1, 0);
+		}
 	
-		fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] = (charStartOffset - (size - oldSize)) / 4;
+		fontdata->offsetData[charId + isSH4] = (charStartOffset - (size - oldSize)) / 4;
 		delete[] tempData;
 	} else if (oldSize > size) {
 		i = 0;
 		charEndOffset = 0;
-		while (charEndOffset == 0) {
-			charEndOffset = fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] * 4;
+		do {
+			charEndOffset = fontdata->offsetData[i + isSH4] * 4;
 			i++;
-		}
+		} while (charEndOffset == 0);
 		tempData = new uint8_t[charStartOffset - charEndOffset];
 		memcpy(tempData, (uint8_t *)fontdata + charEndOffset, charStartOffset - charEndOffset);
 		memcpy((uint8_t *)fontdata + charEndOffset + (oldSize - size), tempData, charStartOffset - charEndOffset);
 		memcpy((uint8_t *)fontdata + charStartOffset + (oldSize - size), charEncoded, size);
 		for (i = 0; i < charId; i++) {
-			if (fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] != 0)
-				fontdata->offsetData[i + ((game == sh_font::SH4) * 0x70)] += (oldSize - size) / 4;
+			if (fontdata->offsetData[i + isSH4] != 0) {
+				if (getPage(i) == 0 && (fontdata->offsetData[i + isSH4] * 4 + (oldSize - size) >= 0x40000))
+					updatePage(i, 1, 0);
+
+				fontdata->offsetData[i + isSH4] += (oldSize - size) / 4;
+			}
 		}
-		if ((charStartOffset + (oldSize - size)) > 0x40000)
+		if ((charStartOffset + (oldSize - size)) > 0x40000) {
 			charStartOffset -= 0x40000;
-	
-		fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] = (charStartOffset + (oldSize - size)) / 4;
+			updatePage(charId, 1, 0);
+		}
+
+		fontdata->offsetData[charId + isSH4] = (charStartOffset + (oldSize - size)) / 4;
 		
 		if (size == 0) {
-			fontdata->offsetData[charId + ((game == sh_font::SH4) * 0x70)] = 0;
+			fontdata->offsetData[charId + isSH4] = 0;
 			if (charId < 0xE0)
 				fontdata->widthData[charId] = 0;
 		}
