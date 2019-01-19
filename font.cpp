@@ -27,6 +27,7 @@ int GetCharHeight();
 bool decode2tga(int charId, const char *filename);
 int encodeFromTga(int charId, const char *filename);
 void insert2file(int charId, int size, const char *filename);
+bool createbitmap(char *filename, int sx, int sy);
 
 uint8_t *charEncoded;
 uint8_t *fontFile;
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
 	int numChar;
 	int size;
 
-	if (argc == 6 || argc == 5) {
+	if (argc == 7 || argc == 6 || argc == 5) {
 		
 		game = LoadFontFile(argv[1]);
 		
@@ -67,6 +68,8 @@ int main(int argc, char *argv[])
 					insert2file(numChar, size, argv[1]);
 			} else if (argv[3][0] == 'd') {
 				insert2file(numChar, 0, argv[1]);
+			} else if (argv[3][0] == 'b') {
+				createbitmap(argv[6], numChar, atoi(argv[5]));
 			} else {
 				cout << "Unknown option!" << endl;
 				goto exit;
@@ -87,6 +90,9 @@ int main(int argc, char *argv[])
 		cout << endl;
 		cout << "\tDelete single character from font file:" << endl;
 		cout << "\t<FontFile> <FontSize> d <CharacterNumber>" << endl;
+		cout << endl;
+		cout << "\tCreate bitmap from font file:" << endl;
+		cout << "\t<FontFile> <FontSize> b <NumCharInColumn> <NumCharInRow> <tgaFile>" << endl;
 		cout << endl;
 		cout << "\tWhere:" << endl;
 		cout << "\t<FontFile> - name of main file with fonts (*.exe, *.bin files)" << endl;
@@ -292,7 +298,7 @@ uint8_t *DecodeChar(int charId)
 	if (fontdata->offsetData[charId + isSH4] == 0)
 		return NULL;
 
-	uint8_t *charDecoded = new uint8_t[charSize];
+	uint8_t *charDecoded = new uint8_t[charSize + 500];
 	
 	charData = 0;
 	dataReadThree = 0;
@@ -305,7 +311,7 @@ uint8_t *DecodeChar(int charId)
 	int zeroSpace = 0;
 	int num = 0;
 	
-	cout << "Decoding" << endl; 
+	cout << "Decoding " << charId << endl;
 	
 	while (dataOffset < charSize) {
 		Bits = GetBits(charOffset);
@@ -357,8 +363,6 @@ uint8_t *DecodeChar(int charId)
 
 				dataOffset += 4;
 				zeroSpace--;
-
-				cout << "*";
 			}
 		} else {
 			charDecoded[dataOffset + 0] = sh_font::sh_pallete[Bits];
@@ -617,6 +621,65 @@ bool decode2tga(int charId, const char *filename)
 	}
 	
 	file.close();
+
+	return true;
+}
+
+bool createbitmap(char *filename, int sx, int sy)
+{
+	int i, w, h, x, y;
+	TGA_FILEHEADER tga;
+	
+	cout << "Creating bitmap" << endl;
+	
+	//7580 is max for sh2
+	if (sx * sy > 7580) {
+		cout << "Error: selected too many chars!" << endl;
+		return false;
+	}
+	
+	memset(&tga, 0, sizeof(TGA_FILEHEADER));
+
+	tga.color_map_type = 0;
+	tga.image_type = RGBA;
+	tga.cm_length = 0;
+	tga.map_entry_size = 0;
+	tga.pixel_depth = 32;
+	tga.image_desc = 8 | 1 << 5;
+	tga.width = 22 * sx;
+	tga.height = 32 * sy;
+	
+	int size = tga.width * tga.height * 4;
+	uint8_t *tex = new uint8_t[size + 500];
+	int allch = (tga.width * tga.height) / (32 * 22);
+	
+	memset(tex, 0, size);
+	
+	for(i = 0; i < allch; i++) {
+		uint8_t *data = DecodeChar(i);
+		if (data != NULL) {
+			y = ((i / sx)) * tga.width * 4 * 32 + tga.width * 4;
+			x = (i % sx) * 22 * 4 + 4;
+			
+			for (h = GetCharHeight() - 1; h > -1; h--) {
+				for (w = 0; w < GetCharWidth(i); w++) {
+					tex[x + y + tga.width * 4 * h + w * 4 + 0] = data[h * GetCharWidth(i) * 4 + w * 4 + 0];
+					tex[x + y + tga.width * 4 * h + w * 4 + 1] = data[h * GetCharWidth(i) * 4 + w * 4 + 1];
+					tex[x + y + tga.width * 4 * h + w * 4 + 2] = data[h * GetCharWidth(i) * 4 + w * 4 + 2];
+					tex[x + y + tga.width * 4 * h + w * 4 + 3] = data[h * GetCharWidth(i) * 4 + w * 4 + 3];
+				}
+			}
+			delete[] data;
+		}
+	}
+	
+	cout << "Createbitmap ok: " << i << " chars" << endl;
+
+	ofstream file(filename, ofstream::binary);
+	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
+	file.write ((char *)tex, size);
+	file.close();
+	delete[] tex;
 
 	return true;
 }
