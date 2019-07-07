@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		cout << endl;
-		cout << "Silent Hill 2/3/4 PC Font Extractor v0.1a" << endl;
+		cout << "Silent Hill 2/3/4 PC Font Extractor v0.3a" << endl;
 		cout << "Created by belek666, e-mail: belek666@onet.eu" << endl;
 		cout << "Unpacking code provided by Dencraft" << endl;
 		cout << endl;
@@ -298,7 +298,7 @@ uint8_t *DecodeChar(int charId)
 	if (fontdata->offsetData[charId + isSH4] == 0)
 		return NULL;
 
-	uint8_t *charDecoded = new uint8_t[charSize + 500];
+	uint8_t *charDecoded = new uint8_t[charSize + 2048];
 	
 	charData = 0;
 	dataReadThree = 0;
@@ -311,7 +311,7 @@ uint8_t *DecodeChar(int charId)
 	int zeroSpace = 0;
 	int num = 0;
 	
-	cout << "Decoding " << charId << endl;
+	cout << "Decoding " << charId << " offset: " << charOffset << " size: " << charSize << endl;
 	
 	while (dataOffset < charSize) {
 		Bits = GetBits(charOffset);
@@ -415,7 +415,7 @@ int EncodeChar(uint8_t *charImg, int size)
 {
 	int i;
 	
-	charEncoded = new uint8_t[size];
+	charEncoded = new uint8_t[size + 2048];
 	
 	charData = 0;
 	writeOffset = 0;
@@ -609,7 +609,7 @@ bool decode2tga(int charId, const char *filename)
 	ofstream file(filename, ofstream::binary);
 	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
 	file.write ((char *)&tga_pallete, sizeof(tga_pallete));
-	
+
 	for (i = GetCharHeight() - 1; i > -1; i--) {
 		for (j = 0; j < GetCharWidth(charId); j++) {
 			for (k = 0; k < 7; k++) {
@@ -646,20 +646,20 @@ bool createbitmap(char *filename, int sx, int sy)
 	tga.map_entry_size = 0;
 	tga.pixel_depth = 32;
 	tga.image_desc = 8 | 1 << 5;
-	tga.width = 22 * sx;
-	tga.height = 32 * sy;
+	tga.width = (GetCharWidth(0xE0) + 2) * sx;
+	tga.height = (GetCharHeight() + 2) * sy;
 	
 	int size = tga.width * tga.height * 4;
-	uint8_t *tex = new uint8_t[size + 500];
-	int allch = (tga.width * tga.height) / (32 * 22);
+	uint8_t *tex = new uint8_t[size + 2048];
+	int allch = (tga.width * tga.height) / ((GetCharHeight() + 2) * (GetCharWidth(0xE0) + 2));
 	
 	memset(tex, 0, size);
 	
-	for(i = 0; i < allch; i++) {
+	for (i = 0; i < allch; i++) {
 		uint8_t *data = DecodeChar(i);
 		if (data != NULL) {
-			y = ((i / sx)) * tga.width * 4 * 32 + tga.width * 4;
-			x = (i % sx) * 22 * 4 + 4;
+			y = ((i / sx)) * tga.width * 4 * (GetCharHeight() + 2) + tga.width * 4;
+			x = (i % sx) * (GetCharWidth(0xE0) + 2) * 4 + 4;
 			
 			for (h = GetCharHeight() - 1; h > -1; h--) {
 				for (w = 0; w < GetCharWidth(i); w++) {
@@ -676,10 +676,18 @@ bool createbitmap(char *filename, int sx, int sy)
 	cout << "Createbitmap ok: " << i << " chars" << endl;
 
 	ofstream file(filename, ofstream::binary);
-	file.write ((char *)&tga, sizeof(TGA_FILEHEADER));
-	file.write ((char *)tex, size);
+	file.write((char *)&tga, sizeof(TGA_FILEHEADER));
+	file.write((char *)tex, size);
 	file.close();
 	delete[] tex;
+
+	char wdataname[255];
+	memset(wdataname, 0, sizeof(wdataname));
+	strncpy(wdataname, filename, strlen(filename) - 4);
+	strcat(wdataname, "_fontwdata.bin");
+	ofstream wfile(wdataname, ofstream::binary);
+	wfile.write((char *)fontdata->widthData, 0xE0);
+	wfile.close();
 
 	return true;
 }
