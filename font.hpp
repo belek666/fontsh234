@@ -60,7 +60,17 @@ namespace sh_font
 		SH2,
 		SH3,
 		SH4,
+		PS2_SH2,
+		PS2_SH3,
 	};
 	
+	struct ps2sh234_type
+	{
+		const char *elfName;
+		SHGAME game;
+		std::uint32_t fontStructOffset;
+		std::uint32_t size;
+		std::uint32_t offset;
+	};
 	#pragma pack(pop)
 }

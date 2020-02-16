@@ -17,30 +17,42 @@ sh_font::SHGAME LoadFontFile(const char *filename);
 void UnloadFontFile();
 bool OpenFont(int type);
 
-int GetCharSize(int charId);
 uint8_t *DecodeChar(int charId);
 int EncodeChar(uint8_t *charImg, int size);
 
 int GetCharWidth(int charId);
 int GetCharHeight();
+void UpadteFontFile(const char* filename);
 
 bool decode2tga(int charId, const char *filename);
 int encodeFromTga(int charId, const char *filename);
-void insert2file(int charId, int size, const char *filename);
+void insert2file(int charId, int size);
 bool createbitmap(char *filename, int sx, int sy);
+bool writebitmap(char* fontfilename, char* filename, int sx, int sy);
 
 uint8_t *charEncoded;
 uint8_t *fontFile;
-int fontSize;
+streamoff fontSize;
 int isSH4 = 0;
+uint32_t fontOffset = 0;
 
 sh_font::sh2_font_file_header *sh2head;
 sh_font::sh3_font_file_header *sh3head;
 sh_font::sh4_font_file_header *sh4head;
 
+#define PS2GAMES 6
+
+sh_font::ps2sh234_type ps2games[PS2GAMES] = {
+	{ "SLES_503.82", sh_font::PS2_SH2, 0x001D9960, 3074200, 0x000FF800 },
+	{ "SLES_511.56", sh_font::PS2_SH2, 0x001E57A0, 3150616, 0x000FF800 },
+	{ "SLUS_202.28", sh_font::PS2_SH2, 0x001D7950, 3045672, 0x000FF900 },
+	{ "SLUS_202.28", sh_font::PS2_SH2, 0x001E4DA0, 3147928, 0x000FF800 },
+	{ "SLPM_123.45", sh_font::PS2_SH2, 0x002DEAB8, 10065884, 0x000FFF80 },
+	{ "SLES_514.34", sh_font::PS2_SH3, 0x00259FE8, 3395784, 0x000FFA80 },
+};
+
 int main(int argc, char *argv[])
 {
-	int i;
 	int numChar;
 	int size;
 
@@ -64,12 +76,17 @@ int main(int argc, char *argv[])
 				decode2tga(numChar, argv[5]);
 			} else if (argv[3][0] == 'i') {
 				size = encodeFromTga(numChar, argv[5]);
-				if (size > 0)
-					insert2file(numChar, size, argv[1]);
+				if (size > 0) {
+					insert2file(numChar, size);
+					UpadteFontFile(argv[1]);
+				}
 			} else if (argv[3][0] == 'd') {
-				insert2file(numChar, 0, argv[1]);
+				insert2file(numChar, 0);
+				UpadteFontFile(argv[1]);
 			} else if (argv[3][0] == 'b') {
 				createbitmap(argv[6], numChar, atoi(argv[5]));
+			} else if (argv[3][0] == 'w') {
+				writebitmap(argv[1], argv[6], numChar, atoi(argv[5]));
 			} else {
 				cout << "Unknown option!" << endl;
 				goto exit;
@@ -77,7 +94,7 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		cout << endl;
-		cout << "Silent Hill 2/3/4 PC Font Extractor v0.3a" << endl;
+		cout << "Silent Hill 2/3/4 PC/PS2 Font Extractor v0.4a" << endl;
 		cout << "Created by belek666, e-mail: belek666@onet.eu" << endl;
 		cout << "Unpacking code provided by Dencraft" << endl;
 		cout << endl;
@@ -93,6 +110,9 @@ int main(int argc, char *argv[])
 		cout << endl;
 		cout << "\tCreate bitmap from font file:" << endl;
 		cout << "\t<FontFile> <FontSize> b <NumCharInColumn> <NumCharInRow> <tgaFile>" << endl;
+		cout << endl;
+		cout << "\tWrite bitmap to font file:" << endl;
+		cout << "\t<FontFile> <FontSize> w <NumCharInColumn> <NumCharInRow> <tgaFile>" << endl;
 		cout << endl;
 		cout << "\tWhere:" << endl;
 		cout << "\t<FontFile> - name of main file with fonts (*.exe, *.bin files)" << endl;
@@ -113,13 +133,14 @@ sh_font::SHGAME LoadFontFile(const char *filename)
 {
 	int i;
 	isSH4 = 0;
+	fontOffset = 0;
 
 	ifstream file(filename, ios::in|ios::binary|ios::ate);
 	
 	if (file.is_open()) {
 		file.seekg(0, file.end);
 		fontSize = file.tellg();
-		fontFile = new uint8_t [fontSize];
+		fontFile = new uint8_t [(int)fontSize];
 		file.seekg (0, ios::beg);
 		file.read ((char *)fontFile, fontSize);
 		file.close();
@@ -135,6 +156,14 @@ sh_font::SHGAME LoadFontFile(const char *filename)
 				isSH4 = 0x70;
 				return sh_font::SH4;
 			}
+		} else if (fontFile[0] == 0x7F && fontFile[1] == 'E' && fontFile[2] == 'L' && fontFile[3] == 'F' ) {
+			for (i = 0; i < PS2GAMES; i++) {
+				if (strcmp(strrchr(filename, '.') - 8, ps2games[i].elfName) == 0 && ps2games[i].size == fontSize) {
+					sh2head = (sh_font::sh2_font_file_header *)(fontFile + ps2games[i].fontStructOffset);
+					fontOffset = ps2games[i].offset;
+					return ps2games[i].game;
+				}
+			}
 		} else {
 			for (i = 0; i < (fontSize - 7); i++) {
 				if (fontFile[i] == sh_font::sh_pallete[0] && fontFile[i + 1] == sh_font::sh_pallete[1] && 
@@ -144,8 +173,10 @@ sh_font::SHGAME LoadFontFile(const char *filename)
 			
 					sh2head = (sh_font::sh2_font_file_header *)(fontFile + i - 16);
 					
-					if (sh2head->unk == 0x1F)
-					 	return sh_font::SH2;
+					if (sh2head->unk == 0x1F) {
+						fontOffset = 0x00400000;
+						return sh_font::SH2;
+					}
 				}
 			}
 		}
@@ -165,6 +196,15 @@ void UnloadFontFile()
 		delete[] charEncoded;	
 }
 
+void UpadteFontFile(const char* filename)
+{
+	ofstream file(filename, ofstream::binary);
+	if (file.is_open()) {
+		file.write((char*)fontFile, fontSize);
+		file.close();
+	}
+}
+
 sh_font::sh_font_data *fontdata;
 
 int fontType;
@@ -172,11 +212,11 @@ int fontType;
 bool OpenFont(int type)
 {
 	if (fontFile != NULL && game != sh_font::UNK) {
-		if (game == sh_font::SH2) {
+		if (game == sh_font::SH2 || game == sh_font::PS2_SH2 || game == sh_font::PS2_SH3) {
 			if (type == NORMAL)
-				fontdata = (sh_font::sh_font_data *)(fontFile + sh2head->normalFontOffset - 0x00400000);
+				fontdata = (sh_font::sh_font_data *)(fontFile + sh2head->normalFontOffset - fontOffset);
 			else if (type == SMALL)
-				fontdata = (sh_font::sh_font_data *)(fontFile + sh2head->smallFontOffset - 0x00400000);
+				fontdata = (sh_font::sh_font_data *)(fontFile + sh2head->smallFontOffset - fontOffset);
 		} else if (game == sh_font::SH3) {
 			if (type == NORMAL)
 				fontdata = (sh_font::sh_font_data *)(fontFile + sh3head->normalFontOffset);
@@ -201,36 +241,38 @@ int GetCharWidth(int charId)
 {
 	if (charId >= 0xE0) {
 		if (fontType == NORMAL) {
-			if (game == sh_font::SH2)
+			if (game == sh_font::SH2 || game == sh_font::PS2_SH2 || game == sh_font::PS2_SH3)
 				return sh2head->normalFontWidth;
 			else if (game == sh_font::SH4)
 				return 25;
 			else
 				return 20;
 		} else if (fontType == SMALL) {
-			if (game == sh_font::SH2)
+			if (game == sh_font::SH2 || game == sh_font::PS2_SH2 || game == sh_font::PS2_SH3)
 				return sh2head->smallFontWidth;
 			else if (game == sh_font::SH4)
 				return 20;
 			else
 				return 16;
 		}
+	} else {
+		return fontdata->widthData[charId];
 	}
-	
-	return fontdata->widthData[charId];
+
+	return 0;
 }
 
 int GetCharHeight()
 {
 	if (fontType == NORMAL)
-		if (game == sh_font::SH2)
+		if (game == sh_font::SH2 || game == sh_font::PS2_SH2 || game == sh_font::PS2_SH3)
 			return sh2head->normalFontHeight;
 		else if (game == sh_font::SH4)
 			return 32;
 		else
 			return 30;
 	else if (fontType == SMALL)
-		if (game == sh_font::SH2)
+		if (game == sh_font::SH2 || game == sh_font::PS2_SH2 || game == sh_font::PS2_SH3)
 			return sh2head->smallFontHeight;
 		else if (game == sh_font::SH4)
 			return 26;
@@ -683,18 +725,158 @@ bool createbitmap(char *filename, int sx, int sy)
 
 	char wdataname[255];
 	memset(wdataname, 0, sizeof(wdataname));
-	strncpy(wdataname, filename, strlen(filename) - 4);
-	strcat(wdataname, "_fontwdata.bin");
+	strncpy_s(wdataname, filename, strlen(filename) - 4);
+	strcat_s(wdataname, "_fontwdata.bin");
 	ofstream wfile(wdataname, ofstream::binary);
-	wfile.write((char *)fontdata->widthData, 0xE0);
-	wfile.close();
+	if (wfile.is_open()) {
+		wfile.write((char*)fontdata->widthData, 0xE0);
+		wfile.close();
+	}
 
+	return true;
+}
+
+bool writebitmap(char *fontfilename, char *filename, int sx, int sy)
+{
+	int i, k;
+	TGA_FILEHEADER tga;
+
+	ifstream file(filename, ios::in|ios::binary|ios::ate);
+	
+	if (file.is_open()) {
+		file.seekg(0, ios::beg);
+		file.read((char *)&tga, sizeof(TGA_FILEHEADER));
+		
+		if (tga.color_map_type != 0 || tga.image_type != RGBA ||
+			tga.cm_length != 0 || tga.map_entry_size != 0 ||
+			tga.pixel_depth != 32 || tga.image_desc != (8 | 1 << 5)) {
+			cout << "Wrong tga format!" << endl;
+			return false;  	
+		}
+		
+		if (tga.width != (GetCharWidth(0xE0) + 2) * sx) {
+			cout << "Wrong character width!" << endl;
+			return false;
+		}
+		
+		if (tga.height != (GetCharHeight() + 2) * sy) {
+			cout << "Wrong character height!" << endl;
+			return false;
+		}
+
+		char wdataname[255];
+		memset(wdataname, 0, sizeof(wdataname));
+		strncpy_s(wdataname, filename, strlen(filename) - 4);
+		strcat_s(wdataname, "_fontwdata.bin");
+		ifstream wfile(wdataname, ios::in | ios::binary | ios::ate);
+		uint8_t* wdata = new uint8_t[0xE0 * 2];
+
+		if (wfile.is_open()) {
+			wfile.seekg(0, ios::beg);
+			wfile.read((char*)wdata, 0xE0);
+			wfile.close();
+		} else {
+			cout << "No '" << wdataname << "' present in directory!" << endl;
+			file.close();
+			return false;
+		}
+
+		file.seekg(sizeof(TGA_FILEHEADER), ios::beg);
+		int size = tga.width * tga.height * 4;
+		uint8_t* tex = new uint8_t[size];
+		if (tex == NULL)
+			return false;
+
+		file.read((char*)tex, size);
+		file.close();
+
+		int allch = (tga.width * tga.height) / ((GetCharHeight() + 2) * (GetCharWidth(0xE0) + 2));
+		int width, x, y, w, h;
+		int zeropix;
+
+		for (i = 0; i < allch; i++) {
+			if (i < 0xE0) {
+				width = wdata[i];
+			} else {
+				width = GetCharWidth(0xE0);
+			}
+
+			if (width == 0) {
+				if (i < 0xE0 && fontdata->widthData[i] != 0) {
+					insert2file(i, 0);
+				}
+				continue;
+			}
+			
+			zeropix = 0;
+			
+			uint8_t* data = new uint8_t[width * GetCharHeight() * 4];
+			if (data != NULL) {
+				y = ((i / sx)) * tga.width * 4 * (GetCharHeight() + 2) + tga.width * 4;
+				x = (i % sx) * (GetCharWidth(0xE0) + 2) * 4 + 4;
+
+				for (h = GetCharHeight() - 1; h > -1; h--) {
+					for (w = 0; w < width; w++) {
+						data[h * width * 4 + w * 4 + 0] = tex[x + y + tga.width * 4 * h + w * 4 + 0];
+						data[h * width * 4 + w * 4 + 1] = tex[x + y + tga.width * 4 * h + w * 4 + 1];
+						data[h * width * 4 + w * 4 + 2] = tex[x + y + tga.width * 4 * h + w * 4 + 2];
+						data[h * width * 4 + w * 4 + 3] = tex[x + y + tga.width * 4 * h + w * 4 + 3];
+
+						for (k = 0; k < 7; k++) {
+							if (data[h * width * 4 + w * 4 + 0] == sh_font::sh_pallete[k] || 
+								data[h * width * 4 + w * 4 + 1] == sh_font::sh_pallete[k] || 
+								data[h * width * 4 + w * 4 + 2] == sh_font::sh_pallete[k]) {
+								data[h * width * 4 + w * 4 + 0] = data[h * width * 4 + w * 4 + 1] = data[h * width * 4 + w * 4 + 2] = sh_font::sh_pallete[k];
+								break;
+							}
+						}
+
+						if (k == 7) {
+							cout << "Need to fix colour." << endl;
+							int color = (data[h * width * 4 + w * 4 + 0] + data[h * width * 4 + w * 4 + 1] + data[h * width * 4 + w * 4 + 2]) / 3;
+							for (k = 0; k < 7; k++) {
+								if (color < sh_font::sh_pallete[k])
+									break;
+							}
+							if (k > 0)
+								data[h * width * 4 + w * 4 + 0] = data[h * width * 4 + w * 4 + 1] = data[h * width * 4 + w * 4 + 2] = sh_font::sh_pallete[k - 1];
+							else
+								data[h * width * 4 + w * 4 + 0] = data[h * width * 4 + w * 4 + 1] = data[h * width * 4 + w * 4 + 2] = 0;
+						}
+
+						if (data[h * width * 4 + w * 4 + 0] == 0)
+							zeropix++;
+					}
+				}
+			}
+
+			if (zeropix == GetCharHeight() * width) {
+				insert2file(i, 0);
+			} else {
+				size = EncodeChar(data, GetCharHeight() * width * 4);
+				if (size > 0) {
+					if (i < 0xE0)
+						fontdata->widthData[i] = width;
+
+					insert2file(i, size);
+				}
+			}
+
+			delete[] data;
+		}
+
+		cout << "Writebitmap ok: " << i << " chars" << endl;
+
+		delete[] tex;
+		UpadteFontFile(fontfilename);
+	}
+	
 	return true;
 }
 
 int encodeFromTga(int charId, const char *filename)
 {
-	int i, j, k;
+	int i, j;
 	uint8_t c;
 	TGA_FILEHEADER tga;
 
@@ -748,7 +930,7 @@ int encodeFromTga(int charId, const char *filename)
 		file.close();
 		
 		if (charId < 0xE0)
-			fontdata->widthData[charId] = tga.width;
+			fontdata->widthData[charId] = (uint8_t)tga.width;
 		
 		return EncodeChar(charData, size);
 	}
@@ -756,7 +938,7 @@ int encodeFromTga(int charId, const char *filename)
 	return 0;
 }
 
-void insert2file(int charId, int size, const char *filename)
+void insert2file(int charId, int size)
 {
 	int i;
 	int charStartOffset, charEndOffset;
@@ -851,9 +1033,5 @@ void insert2file(int charId, int size, const char *filename)
 		
 		delete[] tempData;
 	}
-
-	ofstream efile(filename, ofstream::binary);
-	efile.write ((char *)fontFile, fontSize);
-	efile.close();
 }
 
