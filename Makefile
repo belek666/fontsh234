@@ -1,6 +1,6 @@
 
 CPP      = g++.exe
-OBJ      = font.o
+OBJ      = main.o font.o offset.o tga.o
 BIN      = sh234font.exe
 CXXFLAGS = -std=c++11
 
@@ -12,5 +12,5 @@ clean:
 $(BIN): $(OBJ)
 	$(CPP) $(OBJ) -o $(BIN)
 
-font.o: font.cpp
-	$(CPP) -c font.cpp -o font.o $(CXXFLAGS)
+%.o: %.cpp
+	$(CPP) -c $< -o $@ $(CXXFLAGS)

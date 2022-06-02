@@ -124,10 +124,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="font.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="offset.cpp" />
+    <ClCompile Include="tga.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font.hpp" />
-    <ClInclude Include="tga.h" />
+    <ClInclude Include="offset.hpp" />
+    <ClInclude Include="tga.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
