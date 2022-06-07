@@ -182,7 +182,7 @@ bool encodeFromTga(int charId, const char* filename)
 		}
 
 		uint8_t *out = new uint8_t[size];
-		encodedSize = encodeChar(charData, size, out);
+		encodedSize = encodeChar(charData, charId, size, out);
 		if (encodedSize > 0 && out != NULL) {
 			ret = insertData(getFontData(), charId, out, encodedSize, getDataOffset(), getMaxId());
 		}
@@ -391,12 +391,17 @@ bool writeBitmap(char* fontfilename, char* filename, int sx, int sy)
 			}
 			else {
 				uint8_t *out = new uint8_t[size];
-				size = encodeChar(data, getCharHeight() * width * 4, out);
+				size = encodeChar(data, i, getCharHeight() * width * 4, out);
 				if (size > 0) {
 					if (i < 0xE0) {
 						setCharWidth(i, width);
 					}
 					ret = insertData(getFontData(), i, out, size, getDataOffset(), getMaxId());
+				}
+				else {
+					cout << "\t Failed to encode char id: " << i << endl;
+					ret = false;
+					break;
 				}
 			}
 

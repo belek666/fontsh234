@@ -80,7 +80,7 @@ SHGAME loadFontFile(const char* filename);
 void unloadFontFile();
 bool openFont(FONT_SIZE type);
 uint8_t* decodeChar(int charId);
-int encodeChar(uint8_t* charImg, int size, uint8_t* charEncoded);
+int encodeChar(uint8_t* charImg, int charId, int size, uint8_t* charEncoded);
 int getCharWidth(int charId);
 int getCharHeight();
 void setCharWidth(int charId, uint8_t width);

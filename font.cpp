@@ -255,7 +255,7 @@ uint8_t *decodeChar(int charId) {
 	int charSize = getCharWidth(charId) * getCharHeight() * 4;
 	int charOffset = getCharOffset(fontdata, charId, dataOffset);
 	
-	if (fontdata->offsetData[charId + dataOffset] == 0) {
+	if (charOffset == 0) {
 		return NULL;
 	}
 
@@ -379,7 +379,7 @@ static void GiveBits(uint8_t Bits, uint8_t *charEncoded) {
 	encSize++;
 }
 
-int encodeChar(uint8_t *charImg, int size, uint8_t *charEncoded) {
+int encodeChar(uint8_t *charImg, int charId, int size, uint8_t *charEncoded) {
 	if (charImg == NULL || charEncoded == NULL) {
 		return -1;
 	}
@@ -397,7 +397,7 @@ int encodeChar(uint8_t *charImg, int size, uint8_t *charEncoded) {
 	int num = 0;
 	
 	char log[100];
-	sprintf_s(log, 100, "Encoding, size: %d", size);
+	sprintf_s(log, 100, "Encoding char %d, size: %d", charId, size);
 	printProgress(log, 0, size);
 
 	while (dataOffset < size) {

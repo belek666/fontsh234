@@ -19,8 +19,12 @@ int getCharOffset(sh_font_data* data, int charId, int offset) {
 	int charOffset = -1;
 	if (data != NULL && charId >= 0) {
 		charOffset = data->offsetData[charId + offset] * 4;
+		int page = getPage(data, charId);
 		if (charOffset > 0) {
-			charOffset += 0x40000 * getPage(data, charId);
+			charOffset += 0x40000 * page;
+		}
+		else if (page > 0 && data->boffset[page - 1] == charId) {
+			charOffset += 0x40000 * page;
 		}
 	}
 	return charOffset;
@@ -110,15 +114,19 @@ bool insertData(sh_font_data* data, int charId, uint8_t* charData, int size, int
 }
 
 static int getPage(sh_font_data* data, int charId) {
-	int i = 0;
 	int page = 0;
 	if (data->boffset[0] != 0) {
-		do {
-			if (data->boffset[i] < charId) {
-				page++;
+		for (page = 0; page < 8; page++) {
+			if (data->boffset[page] != 0 && data->boffset[page] <= charId) {
+				break;
 			}
-			i++;
-		} while (data->boffset[i]);
+		}
+		if (page > 7) {
+			page = 0;
+		}
+		else {
+			page++;
+		}
 	}
 	return page;
 }
@@ -190,11 +198,19 @@ static bool updateCharOffset(sh_font_data* data, int charId, int newOffset, int 
 	if (newOffset >= 0x40000) {
 		int page = (newOffset / 0x40000) - 1;
 		if (tempPage[page] > charId) {
+			//cout << "\tCurrent page " << page << " = " << tempPage[page] << " update to " << charId << " new offset " << newOffset << endl;
 			tempPage[page] = charId;
 		}
-		data->offsetData[charId + offset] = (newOffset - 0x40000 * page) / 4;
+		data->offsetData[charId + offset] = (newOffset - 0x40000 * (page + 1)) / 4;
 	}
 	else {
+		int page = getPage(data, charId) - 1;
+		if (page > -1 && tempPage[page] <= charId) {
+			//cout << "\tCurrent page " << page << " = " << tempPage[page] << " remove " << charId << " new offset " << newOffset << endl;
+			if (newOffset > 0) {
+				tempPage[page] = charId + 1;
+			}
+		}
 		data->offsetData[charId + offset] = newOffset / 4;
 	}
 	return true;
