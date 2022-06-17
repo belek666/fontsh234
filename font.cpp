@@ -27,15 +27,23 @@ static sh2_font_file_header *sh2head;
 static sh3_font_file_header *sh3head;
 static sh4_font_file_header *sh4head;
 
-#define PS2GAMES 6
+#define PS2GAMES 7
 
-static ps2sh234_type ps2games[PS2GAMES] = {
+static sh234_type ps2games[PS2GAMES] = {
 	{ "SLES_503.82", PS2_SH2, 0x001D9960, 3074200, 0x000FF800 },
 	{ "SLES_511.56", PS2_SH2, 0x001E57A0, 3150616, 0x000FF800 },
 	{ "SLUS_202.28", PS2_SH2, 0x001D7950, 3045672, 0x000FF900 },
 	{ "SLUS_202.28", PS2_SH2, 0x001E4DA0, 3147928, 0x000FF800 },
+	{ "SLPM_650.98", PS2_SH2, 0x001E49A0, 3147032, 0x000FFF80 },
 	{ "SLPM_123.45", PS2_SH2, 0x002DEAB8, 10065884, 0x000FFF80 },
 	{ "SLES_514.34", PS2_SH3, 0x00259FE8, 3395784, 0x000FFA80 },
+};
+
+#define XBOXGAMES 2
+
+static sh234_type xboxgames[XBOXGAMES] = {
+	{ "default.xbe", XBOX_SH2, 0x0038C550, 5054464, 0x0000CC40 }, //Silent Hill 2 - Inner Fears (Europe)
+	{ "default.xbe", XBOX_SH2, 0x003782B0, 4960256, 0x0000D0A0 }, //Silent Hill 2 - Restless Dreams (USA)
 };
 
 SHGAME loadFontFile(const char *filename) {
@@ -66,25 +74,34 @@ SHGAME loadFontFile(const char *filename) {
 				game = SH4;
 			}
 		} 
-		else if (fontFile[0] == 0x7F && fontFile[1] == 'E' && fontFile[2] == 'L' && fontFile[3] == 'F' ) {
+		else if (fontFile[0] == 0x7F && fontFile[1] == 'E' && fontFile[2] == 'L' && fontFile[3] == 'F' ) { //ps2
 			for (int i = 0; i < PS2GAMES; i++) {
-				if (strcmp(strrchr(filename, '.') - 8, ps2games[i].elfName) == 0 && ps2games[i].size == fontSize) {
+				if (strcmp(strrchr(filename, '.') - 8, ps2games[i].fileName) == 0 && ps2games[i].size == fontSize) {
 					sh2head = (sh2_font_file_header *)(fontFile + ps2games[i].fontStructOffset);
 					fontOffset = ps2games[i].offset;
 					game = ps2games[i].game;
 					break;
 				}
 			}
-		} 
-		else {
+		}
+		else if (strncmp(filename + strlen(filename) - 3, "xbe", 3) == 0) { //xbox
+			for (int i = 0; i < XBOXGAMES; i++) {
+				if (xboxgames[i].size == fontSize) {
+					sh2head = (sh2_font_file_header*)(fontFile + xboxgames[i].fontStructOffset);
+					fontOffset = xboxgames[i].offset;
+					game = xboxgames[i].game;
+					break;
+				}
+			}
+		}
+		else { //pc
 			for (int i = 0; i < (fontSize - 7); i++) {
 				if (fontFile[i] == sh_pallete[0] && fontFile[i + 1] == sh_pallete[1] && 
 					fontFile[i + 2] == sh_pallete[2] && fontFile[i + 3] == sh_pallete[3] &&
 					fontFile[i + 4] == sh_pallete[4] && fontFile[i + 5] == sh_pallete[5] &&
 					fontFile[i + 6] == sh_pallete[6] ) {
-			
-					sh2head = (sh2_font_file_header *)(fontFile + i - 16);
 					
+					sh2head = (sh2_font_file_header *)(fontFile + i - 16);
 					if (sh2head->unk == 0x1F) {
 						fontOffset = 0x00400000;
 						game = SH2;
@@ -117,7 +134,7 @@ void updateFontFile(const char* filename) {
 
 bool openFont(FONT_SIZE type) {
 	if (fontFile != NULL && game != UNK) {
-		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3) {
+		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3 || game == XBOX_SH2) {
 			if (type == NORMAL) {
 				fontdata = (sh_font_data*)(fontFile + sh2head->normalFontOffset - fontOffset);
 			}
@@ -148,7 +165,7 @@ bool openFont(FONT_SIZE type) {
 int getCharWidth(int charId) {
 	if (charId >= 0xE0) {
 		if (fontType == NORMAL) {
-			if (game == SH2 || game == PS2_SH2 || game == PS2_SH3) {
+			if (game == SH2 || game == PS2_SH2 || game == PS2_SH3 || game == XBOX_SH2) {
 				return sh2head->normalFontWidth;
 			}
 			else if (game == SH4) {
@@ -159,7 +176,7 @@ int getCharWidth(int charId) {
 			}
 		} 
 		else if (fontType == SMALL) {
-			if (game == SH2 || game == PS2_SH2 || game == PS2_SH3) {
+			if (game == SH2 || game == PS2_SH2 || game == PS2_SH3 || game == XBOX_SH2) {
 				return sh2head->smallFontWidth;
 			}
 			else if (game == SH4) {
@@ -178,7 +195,7 @@ int getCharWidth(int charId) {
 
 int getCharHeight() {
 	if (fontType == NORMAL) {
-		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3) {
+		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3 || game == XBOX_SH2) {
 			return sh2head->normalFontHeight;
 		}
 		else if (game == SH4) {
@@ -189,7 +206,7 @@ int getCharHeight() {
 		}
 	}
 	else if (fontType == SMALL) {
-		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3) {
+		if (game == SH2 || game == PS2_SH2 || game == PS2_SH3 || game == XBOX_SH2) {
 			return sh2head->smallFontHeight;
 		}
 		else if (game == SH4) {

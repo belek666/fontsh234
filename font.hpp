@@ -9,6 +9,7 @@ enum SHGAME {
 	SH4,
 	PS2_SH2,
 	PS2_SH3,
+	XBOX_SH2,
 };
 
 enum FONT_SIZE {
@@ -64,9 +65,9 @@ struct sh_font_data
 	std::uint16_t offsetData[];			// character data offset table
 };
 
-struct ps2sh234_type
+struct sh234_type
 {
-	const char* elfName;
+	const char* fileName;
 	SHGAME game;
 	std::uint32_t fontStructOffset;
 	std::uint32_t size;
